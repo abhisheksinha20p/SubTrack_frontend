@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const response = await apiLogin(data);
             if (response.success && response.data) {
                 // Store token and user
-                const { token, refreshToken, user } = response.data; // Adjust based on actual API response structure
-                localStorage.setItem("accessToken", token);
+                const { accessToken, refreshToken, user } = response.data;
+                localStorage.setItem("accessToken", accessToken);
                 if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
                 localStorage.setItem("user", JSON.stringify(user));
 
@@ -71,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const response = await apiRegister(data);
             if (response.success) {
                 // Auto login handling if token present
-                if (response.data?.token) {
-                    const { token, refreshToken, user } = response.data;
-                    localStorage.setItem("accessToken", token);
+                if (response.data?.accessToken) {
+                    const { accessToken, refreshToken, user } = response.data;
+                    localStorage.setItem("accessToken", accessToken);
                     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
                     localStorage.setItem("user", JSON.stringify(user));
                     setUser(user);
