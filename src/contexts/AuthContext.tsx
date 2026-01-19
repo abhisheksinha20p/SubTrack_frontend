@@ -11,6 +11,8 @@ interface User {
 
 interface AuthContextType {
     user: User | null;
+    token: string | null;
+    setUser: React.Dispatch<React.SetStateAction<User | null>>;
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (data: any) => Promise<boolean>;
@@ -161,6 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (
         <AuthContext.Provider value={{
             user,
+            token: localStorage.getItem("accessToken"), // Simple read from storage or state
+            setUser,
             isAuthenticated,
             isLoading,
             login,
