@@ -5,71 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-
-const plans = [
-  {
-    id: "free",
-    name: "Free",
-    description: "Get started for free",
-    price: { monthly: 0, yearly: 0 },
-    features: [
-      { name: "Up to 3 users", included: true },
-      { name: "Basic analytics", included: true },
-      { name: "1 project", included: true },
-      { name: "Community support", included: true },
-      { name: "API access", included: false },
-      { name: "Priority support", included: false },
-    ],
-    popular: false,
-    current: false,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    description: "For growing teams",
-    price: { monthly: 29, yearly: 290 },
-    features: [
-      { name: "Unlimited users", included: true },
-      { name: "Advanced analytics", included: true },
-      { name: "10 projects", included: true },
-      { name: "Priority support", included: true },
-      { name: "API access", included: true },
-      { name: "Custom integrations", included: false },
-    ],
-    popular: true,
-    current: true,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "For large organizations",
-    price: { monthly: 99, yearly: 990 },
-    features: [
-      { name: "Unlimited everything", included: true },
-      { name: "Custom analytics", included: true },
-      { name: "Unlimited projects", included: true },
-      { name: "24/7 dedicated support", included: true },
-      { name: "Advanced API", included: true },
-      { name: "Custom integrations", included: true },
-    ],
-    popular: false,
-    current: false,
-  },
-];
-
-const usage = {
-  users: { current: 12, limit: -1, label: "Team members" },
-  projects: { current: 7, limit: 10, label: "Projects" },
-  storage: { current: 2.4, limit: 5, label: "Storage (GB)" },
-  apiCalls: { current: 23500, limit: 50000, label: "API Calls" },
-};
-
-const invoices = [
-  { id: "INV-001", date: "Jan 1, 2024", amount: "$29.00", status: "paid" },
-  { id: "INV-002", date: "Dec 1, 2023", amount: "$29.00", status: "paid" },
-  { id: "INV-003", date: "Nov 1, 2023", amount: "$29.00", status: "paid" },
-  { id: "INV-004", date: "Oct 1, 2023", amount: "$29.00", status: "paid" },
-];
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPlans, createSubscription, updateSubscription, getSubscriptions, syncSubscription, getUsage, getInvoices } from "@/lib/billingService";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -85,6 +24,160 @@ const itemVariants = {
 };
 
 export default function BillingPage() {
+  const { currentOrg } = useAuth();
+  const location = useLocation();
+  const [plans, setPlans] = useState<any[]>([]);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [usage, setUsage] = useState<any>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentOrg) {
+      loadPlans();
+      handleSyncAndLoad();
+      loadUsage();
+      loadInvoices();
+    }
+  }, [currentOrg, location.search]);
+
+  const handleSyncAndLoad = async () => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('success') === 'true' && currentOrg) {
+      try {
+        await syncSubscription(currentOrg._id);
+        window.history.replaceState({}, '', '/billing');
+      } catch (e) {
+        console.error("Sync failed", e);
+      }
+    }
+    loadSubscription();
+  };
+
+  const loadUsage = async () => {
+    if (!currentOrg) return;
+    try {
+      const res = await getUsage(currentOrg._id);
+      if (res.success && res.data?.usage) {
+        setUsage(res.data.usage);
+      }
+    } catch (err) {
+      console.error("Failed to load usage", err);
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (!currentOrg) return;
+    try {
+      const res = await getInvoices(currentOrg._id);
+      if (res.success && res.data?.items) {
+        setInvoices(res.data.items);
+      }
+    } catch (err) {
+      console.error("Failed to load invoices", err);
+    }
+  };
+
+  const loadSubscription = async () => {
+    if (!currentOrg) return;
+    try {
+      console.log("=== Fetching subscription for org:", currentOrg._id);
+      const res = await getSubscriptions(currentOrg._id);
+      console.log("=== Raw API Response:", JSON.stringify(res, null, 2));
+      if (res.success && res.data) {
+        console.log("=== Setting subscription state:", res.data);
+        console.log("=== PlanId from response:", res.data.planId);
+        console.log("=== PlanId type:", typeof res.data.planId);
+        if (typeof res.data.planId === 'object') {
+          console.log("=== Plan Name:", res.data.planId?.name);
+          console.log("=== Plan Slug:", res.data.planId?.slug);
+        }
+        setSubscription(res.data);
+      } else {
+        console.log("=== No subscription data or not success");
+      }
+    } catch (err) {
+      console.error("Failed to load subscription", err);
+    }
+  };
+
+  const loadPlans = async () => {
+    try {
+      const res = await getPlans();
+      if (res.success) {
+        setPlans(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load plans", err);
+    }
+  };
+
+  const handleUpgrade = async (plan: any) => {
+    if (!currentOrg) {
+      alert("Please select an organization first.");
+      return;
+    }
+
+    // Check if already on this plan
+    const currentPlanId = subscription?.planId?._id || subscription?.planId;
+    if (currentPlanId === plan._id) {
+      alert("You are already on this plan.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let res;
+
+      // If user has existing paid subscription, use changePlan
+      if (subscription && subscription.status === 'active') {
+        res = await updateSubscription(currentOrg._id, plan._id);
+        // If Stripe checkout is needed
+        if (res.success && res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
+        if (res.success) {
+          alert(res.message || `Plan changed to ${plan.name}!`);
+          await loadSubscription();
+          await loadUsage();
+          window.location.reload();
+          return;
+        }
+      } else {
+        // New subscription
+        res = await createSubscription({
+          organizationId: currentOrg._id,
+          planId: plan._id,
+          billingCycle: 'monthly',
+        });
+
+        if (res.success && res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+          return;
+        } else if (res.success) {
+          await loadSubscription();
+          await loadUsage();
+          window.location.reload();
+          return;
+        }
+      }
+
+      alert(res.error?.message || "Failed to change subscription");
+    } catch (err) {
+      console.error("Upgrade failed", err);
+      alert("An error occurred during upgrade.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const currentPlan = subscription?.planId || plans.find(p => p.slug === 'free');
+  // Plan is paid if price > 0
+  const isPaid = (currentPlan?.pricing?.monthly || 0) > 0;
+  // Can upgrade if not on Enterprise/Business (highest tier)
+  const canUpgrade = !['enterprise', 'business'].includes(currentPlan?.slug);
+
   return (
     <motion.div
       variants={containerVariants}
@@ -94,8 +187,15 @@ export default function BillingPage() {
     >
       {/* Header */}
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Billing</h1>
-        <p className="text-muted-foreground">Manage your subscription and billing information</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Billing</h1>
+            <p className="text-muted-foreground">Manage your subscription and billing information</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => loadSubscription()}>
+            Refresh / Sync
+          </Button>
+        </div>
       </motion.div>
 
       {/* Current Plan */}
@@ -109,15 +209,35 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-semibold text-foreground">Pro Plan</h3>
-                    <Badge variant="success">Active</Badge>
+                    <h3 className="text-xl font-semibold text-foreground">{currentPlan?.name || 'Free Plan'}</h3>
+                    <Badge variant={subscription?.status === 'active' ? "success" : "secondary"}>
+                      {subscription?.status || 'Active'}
+                    </Badge>
                   </div>
-                  <p className="text-muted-foreground">$29/month • Renews on Feb 1, 2024</p>
+                  <p className="text-muted-foreground">
+                    ${currentPlan?.pricing?.monthly || 0}/month
+                    {subscription?.currentPeriod?.end && ` • Renews on ${new Date(subscription.currentPeriod.end).toLocaleDateString()}`}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline">Cancel Plan</Button>
-                <Button variant="gradient">Upgrade to Enterprise</Button>
+                {isPaid && (
+                  <Button variant="outline" onClick={() => alert("Cancellation not implemented yet")}>Cancel Plan</Button>
+                )}
+                {canUpgrade && (
+                  <Button
+                    variant="gradient"
+                    onClick={() => {
+                      const enterprisePlan = plans.find((p: any) => p.slug === 'enterprise' || p.slug === 'business');
+                      if (enterprisePlan) {
+                        handleUpgrade(enterprisePlan);
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    Upgrade to Enterprise
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -132,26 +252,56 @@ export default function BillingPage() {
             <CardDescription>Your current usage for this billing period</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {Object.entries(usage).map(([key, data]) => (
-                <div key={key} className="space-y-2">
+            {currentPlan?.limits ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {/* Users */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{data.label}</span>
+                    <span className="text-muted-foreground">Team Members</span>
                     <span className="font-medium text-foreground">
-                      {typeof data.current === "number" && data.current >= 1000
-                        ? `${(data.current / 1000).toFixed(1)}k`
-                        : data.current}
-                      {data.limit > 0 && ` / ${data.limit >= 1000 ? `${data.limit / 1000}k` : data.limit}`}
-                      {data.limit === -1 && " (Unlimited)"}
+                      {usage?.users?.used || 0}
+                      {currentPlan.limits.users === -1 ? " (Unlimited)" : ` / ${currentPlan.limits.users}`}
                     </span>
                   </div>
-                  <Progress
-                    value={data.limit > 0 ? (data.current / data.limit) * 100 : 100}
-                    className="h-2"
-                  />
+                  <Progress value={currentPlan.limits.users > 0 ? ((usage?.users?.used || 0) / currentPlan.limits.users) * 100 : 100} className="h-2" />
                 </div>
-              ))}
-            </div>
+                {/* Projects */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Projects</span>
+                    <span className="font-medium text-foreground">
+                      {usage?.projects?.used || 0}
+                      {currentPlan.limits.projects === -1 ? " (Unlimited)" : ` / ${currentPlan.limits.projects}`}
+                    </span>
+                  </div>
+                  <Progress value={currentPlan.limits.projects > 0 ? ((usage?.projects?.used || 0) / currentPlan.limits.projects) * 100 : 100} className="h-2" />
+                </div>
+                {/* Storage */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Storage</span>
+                    <span className="font-medium text-foreground">
+                      {((usage?.storage?.used || 0) / 1024).toFixed(1)} GB
+                      {currentPlan.limits.storage === -1 ? " (Unlimited)" : ` / ${(currentPlan.limits.storage / 1024).toFixed(0)} GB`}
+                    </span>
+                  </div>
+                  <Progress value={currentPlan.limits.storage > 0 ? ((usage?.storage?.used || 0) / currentPlan.limits.storage) * 100 : 100} className="h-2" />
+                </div>
+                {/* API Calls */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">API Calls</span>
+                    <span className="font-medium text-foreground">
+                      {(usage?.apiCalls?.used || 0) >= 1000 ? `${((usage?.apiCalls?.used || 0) / 1000).toFixed(1)}k` : usage?.apiCalls?.used || 0}
+                      {currentPlan.limits.apiCalls === -1 ? " (Unlimited)" : ` / ${currentPlan.limits.apiCalls >= 1000 ? `${currentPlan.limits.apiCalls / 1000}k` : currentPlan.limits.apiCalls}`}
+                    </span>
+                  </div>
+                  <Progress value={currentPlan.limits.apiCalls > 0 ? ((usage?.apiCalls?.used || 0) / currentPlan.limits.apiCalls) * 100 : 100} className="h-2" />
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">Loading usage data...</p>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -162,27 +312,26 @@ export default function BillingPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((plan) => (
             <Card
-              key={plan.id}
+              key={plan._id}
               variant="interactive"
               className={cn(
-                plan.popular && "border-primary/50 shadow-glow",
-                plan.current && "bg-primary/5"
+                plan.isPopular && "border-primary/50 shadow-glow"
               )}
             >
               <CardHeader>
-                {plan.popular && (
+                {plan.isPopular && (
                   <Badge variant="default" className="mb-2 w-fit">Most Popular</Badge>
                 )}
                 <CardTitle>{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="pt-4">
-                  <span className="text-4xl font-bold text-foreground">${plan.price.monthly}</span>
+                  <span className="text-4xl font-bold text-foreground">${plan.pricing?.monthly ?? 0}</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {plan.features.map((feature) => (
+                  {plan.features?.map((feature: any) => (
                     <li key={feature.name} className="flex items-center gap-2 text-sm">
                       <Check
                         className={cn(
@@ -199,11 +348,12 @@ export default function BillingPage() {
               </CardContent>
               <CardFooter>
                 <Button
-                  variant={plan.current ? "secondary" : plan.popular ? "gradient" : "outline"}
+                  variant={subscription?.planId?._id === plan._id || subscription?.planId === plan._id ? "outline" : "gradient"}
                   className="w-full"
-                  disabled={plan.current}
+                  onClick={() => handleUpgrade(plan)}
+                  disabled={loading || subscription?.planId?._id === plan._id || subscription?.planId === plan._id}
                 >
-                  {plan.current ? "Current Plan" : "Upgrade"}
+                  {subscription?.planId?._id === plan._id || subscription?.planId === plan._id ? "Current Plan" : "Upgrade"}
                 </Button>
               </CardFooter>
             </Card>
@@ -252,28 +402,40 @@ export default function BillingPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {invoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                      <Building2 className="h-4 w-4 text-primary" />
+            {invoices.length > 0 ? (
+              <div className="space-y-3">
+                {invoices.map((invoice: any) => (
+                  <div
+                    key={invoice._id || invoice.id}
+                    className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                        <Building2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {invoice.invoiceNumber || invoice._id?.slice(-8)?.toUpperCase() || 'INV'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{invoice.id}</p>
-                      <p className="text-xs text-muted-foreground">{invoice.date}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium text-foreground">
+                        ${(invoice.amount || 0).toFixed(2)}
+                      </span>
+                      <Badge variant={invoice.status === 'paid' ? 'success' : 'secondary'}>
+                        {invoice.status || 'pending'}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-foreground">{invoice.amount}</span>
-                    <Badge variant="success">{invoice.status}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No invoices yet</p>
+            )}
           </CardContent>
         </Card>
       </motion.div>

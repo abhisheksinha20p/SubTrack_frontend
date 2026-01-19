@@ -1,61 +1,73 @@
 const API_BASE = '/api/v1/users';
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('accessToken');
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+}
+
 export async function getProfile() {
-  const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/profile`, {
+    headers: getAuthHeaders()
+  });
   return res.json();
 }
 
 export async function updateProfile(data: any) {
   const res = await fetch(`${API_BASE}/profile`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
 
 export async function getOrganizations() {
-  const res = await fetch(`${API_BASE}/organizations`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/organizations`, {
+    headers: getAuthHeaders()
+  });
   return res.json();
 }
 
 export async function createOrganization(data: any) {
   const res = await fetch(`${API_BASE}/organizations`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
 
 export async function getOrganization(orgId: string) {
-  const res = await fetch(`${API_BASE}/organizations/${orgId}`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/organizations/${orgId}`, {
+    headers: getAuthHeaders()
+  });
   return res.json();
 }
 
 export async function updateOrganization(orgId: string, data: any) {
   const res = await fetch(`${API_BASE}/organizations/${orgId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
 
 export async function getMembers(orgId: string) {
-  const res = await fetch(`${API_BASE}/organizations/${orgId}/members`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/organizations/${orgId}/members`, {
+    headers: getAuthHeaders()
+  });
   return res.json();
 }
 
 export async function inviteMember(orgId: string, data: any) {
   const res = await fetch(`${API_BASE}/organizations/${orgId}/members`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
@@ -63,9 +75,8 @@ export async function inviteMember(orgId: string, data: any) {
 export async function updateMember(orgId: string, memberId: string, data: any) {
   const res = await fetch(`${API_BASE}/organizations/${orgId}/members/${memberId}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
@@ -73,22 +84,23 @@ export async function updateMember(orgId: string, memberId: string, data: any) {
 export async function removeMember(orgId: string, memberId: string) {
   const res = await fetch(`${API_BASE}/organizations/${orgId}/members/${memberId}`, {
     method: 'DELETE',
-    credentials: 'include',
+    headers: getAuthHeaders(),
   });
   return res.json();
 }
 
 export async function getSettings() {
-  const res = await fetch(`${API_BASE}/settings`, { credentials: 'include' });
+  const res = await fetch(`${API_BASE}/settings`, {
+    headers: getAuthHeaders()
+  });
   return res.json();
 }
 
 export async function updateSettings(data: any) {
   const res = await fetch(`${API_BASE}/settings`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }

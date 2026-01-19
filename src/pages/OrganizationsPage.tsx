@@ -41,10 +41,10 @@ export default function OrganizationsPage() {
         <h2 className="font-semibold mb-2">Your Organizations</h2>
         <ul className="space-y-2">
           {orgs.map((org: any) => (
-            <li key={org.id}>
-              <Button 
-                variant={selectedOrg === org.id ? 'gradient' : 'outline'} 
-                onClick={() => loadMembers(org.id)}
+            <li key={org._id}>
+              <Button
+                variant={selectedOrg === org._id ? 'gradient' : 'outline'}
+                onClick={() => loadMembers(org._id)}
               >
                 {org.name}
               </Button>
@@ -60,10 +60,10 @@ export default function OrganizationsPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex gap-2">
-              <Input 
-                placeholder="Invite email" 
-                value={inviteEmail} 
-                onChange={e => setInviteEmail(e.target.value)} 
+              <Input
+                placeholder="Invite email"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
               />
               <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger className="w-[140px]">
@@ -96,10 +96,10 @@ export default function OrganizationsPage() {
                     <td className="p-2"><Badge>{m.role}</Badge></td>
                     <td className="p-2">{m.status}</td>
                     <td className="p-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => removeMember(selectedOrg, m.id).then(()=>loadMembers(selectedOrg))}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeMember(selectedOrg, m.id).then(() => loadMembers(selectedOrg))}
                       >
                         Remove
                       </Button>

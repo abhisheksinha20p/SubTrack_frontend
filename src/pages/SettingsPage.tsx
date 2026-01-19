@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Bell, Shield, Palette, Key, Trash2, Camera } from "lucide-react";
+import { User, Bell, Shield, Palette, Key, Trash2, Camera, Building } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { updateOrganization, deleteOrganization } from "@/lib/organizationService";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +27,47 @@ const notificationSettings = [
 ];
 
 export default function SettingsPage() {
+  const { currentOrg, refreshOrganizations } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState(notificationSettings);
+  const [orgName, setOrgName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    if (currentOrg) {
+      setOrgName(currentOrg.name);
+    }
+  }, [currentOrg]);
+
+  const handleUpdateOrg = async () => {
+    if (!currentOrg) return;
+    setIsUpdating(true);
+    try {
+      await updateOrganization(currentOrg._id, { name: orgName });
+      await refreshOrganizations();
+      // user feedback (toast) would be good here
+    } catch (error) {
+      console.error("Failed to update org:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteOrg = async () => {
+    if (!currentOrg) return;
+    if (!confirm("Are you sure you want to delete this organization? This action cannot be undone.")) return;
+
+    setIsUpdating(true);
+    try {
+      await deleteOrganization(currentOrg._id);
+      await refreshOrganizations();
+      navigate("/dashboard"); // Redirect after delete
+    } catch (error) {
+      console.error("Failed to delete org:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const toggleNotification = (id: string, type: "email" | "push") => {
     setNotifications(prev =>
@@ -51,6 +94,12 @@ export default function SettingsPage() {
             <User className="h-4 w-4" />
             Profile
           </TabsTrigger>
+          {currentOrg && ['admin', 'owner'].includes(currentOrg.role || '') && (
+            <TabsTrigger value="organization" className="gap-2">
+              <Building className="h-4 w-4" />
+              Organization
+            </TabsTrigger>
+          )}
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notifications
@@ -129,6 +178,52 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Organization Tab */}
+        <TabsContent value="organization" className="space-y-6">
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle>Organization Settings</CardTitle>
+              <CardDescription>Manage your organization details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="orgName">Organization Name</Label>
+                <div className="flex gap-4">
+                  <Input
+                    id="orgName"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                  />
+                  <Button onClick={handleUpdateOrg} disabled={isUpdating}>
+                    {isUpdating ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {currentOrg?.role === 'owner' && (
+            <Card variant="glass" className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>Irreversible actions for this organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <div>
+                    <p className="font-medium text-foreground">Delete Organization</p>
+                    <p className="text-sm text-muted-foreground">Permanently delete {currentOrg.name} and all data</p>
+                  </div>
+                  <Button variant="destructive" onClick={handleDeleteOrg} disabled={isUpdating}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Organization
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Notifications Tab */}

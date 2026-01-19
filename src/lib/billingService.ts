@@ -1,47 +1,73 @@
 const API_BASE = '/api/v1/billing';
 
 export async function getPlans() {
-  const res = await fetch(`${API_BASE}/plans`, { credentials: 'include' });
-  return res.json();
-}
-
-export async function getSubscriptions() {
-  const res = await fetch(`${API_BASE}/subscriptions`, { credentials: 'include' });
-  return res.json();
-}
-
-export async function createSubscription(data: any) {
-  const res = await fetch(`${API_BASE}/subscriptions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-    credentials: 'include',
+  const res = await fetch(`${API_BASE}/plans`, {
+    headers: { 'Content-Type': 'application/json' }
   });
   return res.json();
 }
 
-export async function updateSubscription(id: string, data: any) {
-  const res = await fetch(`${API_BASE}/subscriptions/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+export async function getSubscriptions(organizationId?: string) {
+  const token = localStorage.getItem('accessToken');
+  const url = organizationId
+    ? `${API_BASE}/subscriptions?organizationId=${organizationId}`
+    : `${API_BASE}/subscriptions`;
+
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return res.json();
+}
+
+export async function createSubscription(data: any) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`${API_BASE}/subscriptions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify(data),
-    credentials: 'include',
+  });
+  return res.json();
+}
+
+export async function updateSubscription(organizationId: string, newPlanId: string) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`${API_BASE}/subscriptions/change`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ organizationId, newPlanId }),
   });
   return res.json();
 }
 
 export async function cancelSubscription(id: string, data: any) {
+  const token = localStorage.getItem('accessToken');
   const res = await fetch(`${API_BASE}/subscriptions/${id}/cancel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify(data),
-    credentials: 'include',
   });
   return res.json();
 }
 
-export async function getInvoices(params = '') {
-  const res = await fetch(`${API_BASE}/invoices${params}`, { credentials: 'include' });
+export async function getInvoices(organizationId?: string) {
+  const token = localStorage.getItem('accessToken');
+  const url = organizationId
+    ? `${API_BASE}/invoices?organizationId=${organizationId}&limit=5`
+    : `${API_BASE}/invoices?limit=5`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
   return res.json();
 }
 
@@ -78,7 +104,26 @@ export async function removePaymentMethod(id: string) {
   return res.json();
 }
 
-export async function getUsage() {
-  const res = await fetch(`${API_BASE}/usage`, { credentials: 'include' });
+export async function getUsage(organizationId?: string) {
+  const token = localStorage.getItem('accessToken');
+  const url = organizationId
+    ? `${API_BASE}/subscriptions/usage?organizationId=${organizationId}`
+    : `${API_BASE}/subscriptions/usage`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return res.json();
+}
+
+export async function syncSubscription(organizationId: string) {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`${API_BASE}/subscriptions/sync`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ organizationId }),
+  });
   return res.json();
 }

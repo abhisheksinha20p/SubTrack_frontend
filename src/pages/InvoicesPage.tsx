@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Download } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const statusVariant: Record<string, any> = {
   paid: 'success',
@@ -25,7 +32,7 @@ export default function InvoicesPage() {
 
   const filtered = invoices.filter(inv =>
     (!filter || inv.invoiceNumber.includes(filter) || inv.dueDate?.includes(filter)) &&
-    (!status || inv.status === status)
+    (!status || status === 'all' || inv.status === status)
   );
 
   return (
@@ -33,13 +40,18 @@ export default function InvoicesPage() {
       <h1 className="text-2xl font-bold mb-4">Invoices</h1>
       <div className="mb-4 flex gap-2">
         <Input placeholder="Filter by number or date" value={filter} onChange={e => setFilter(e.target.value)} />
-        <select value={status} onChange={e => setStatus(e.target.value)} className="border rounded px-2">
-          <option value="">All Status</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="failed">Failed</option>
-          <option value="refunded">Refunded</option>
-        </select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="refunded">Refunded</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Card>
         <CardHeader>
@@ -71,8 +83,8 @@ export default function InvoicesPage() {
                     </td>
                     <td className="p-3">
                       {inv.pdfUrl && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           asChild
                         >
