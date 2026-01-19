@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 
@@ -9,6 +9,14 @@ interface AuthLayoutProps {
 }
 
 export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div className="relative flex min-h-screen w-full">
       {/* Background Pattern */}
@@ -20,9 +28,9 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
       {/* Left Side - Branding */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-primary/10 via-background to-info/10 p-12 lg:flex">
         <Logo />
-        
+
         <div className="space-y-6">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -34,7 +42,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
               with clarity
             </span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -58,7 +66,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
         <div className="mb-8 lg:hidden">
           <Logo />
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

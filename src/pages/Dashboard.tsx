@@ -3,12 +3,13 @@ import { motion } from "framer-motion";
 import {
   Users,
   CreditCard,
-  TrendingUp,
   ArrowUpRight,
   Building2,
   DollarSign,
   Activity,
-  Loader2
+  Loader2,
+  Shield,
+  PlusCircle
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,9 +31,10 @@ import {
   getDashboardStats,
   DashboardData,
   RevenueData,
-  SubscriptionData,
-  ActivityItem
+  SubscriptionData
 } from "@/lib/dashboardService";
+import { useAuth } from "@/contexts/AuthContext";
+import { CreateOrgDialog } from "@/components/organizations/CreateOrgDialog";
 
 // Fallback data for when API fails
 const fallbackRevenueData: RevenueData[] = [
@@ -67,12 +69,23 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const { currentOrg } = useAuth();
+
+  // RBAC: Only Owner/Admin can view financial data
+  const canViewFinancials = currentOrg?.role === 'owner' || currentOrg?.role === 'admin';
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
+      if (!currentOrg?._id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -87,7 +100,29 @@ export default function Dashboard() {
     }
 
     fetchData();
-  }, []);
+  }, [currentOrg?._id]);
+
+  // Empty State: No Organization Selected (New User)
+  if (!loading && !currentOrg) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
+        <div className="p-6 rounded-full bg-primary/10">
+          <Building2 className="h-12 w-12 text-primary" />
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to SubTrack</h1>
+          <p className="text-muted-foreground">
+            To get started, please create an organization. This will be your workspace for managing subscriptions and team members.
+          </p>
+        </div>
+        <Button size="lg" variant="gradient" onClick={() => setShowCreateOrg(true)}>
+          <PlusCircle className="mr-2 h-5 w-5" />
+          Create Organization
+        </Button>
+        <CreateOrgDialog open={showCreateOrg} onOpenChange={setShowCreateOrg} />
+      </div>
+    );
+  }
 
   const stats = data?.stats;
   const revenueData = data?.revenueData || fallbackRevenueData;
@@ -105,7 +140,7 @@ export default function Dashboard() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's what's happening with SubTrack.</p>
+          <p className="text-muted-foreground">Welcome back! Here's what's happening with {currentOrg?.name || 'SubTrack'}.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">Export Report</Button>
@@ -137,12 +172,20 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            <StatCard
-              title="Total Revenue"
-              value={`$${(stats?.monthlyRevenue || 0).toLocaleString()}`}
-              change={{ value: stats?.revenueChange || 0, trend: (stats?.revenueChange || 0) >= 0 ? "up" : "down" }}
-              icon={<DollarSign className="h-6 w-6" />}
-            />
+            {canViewFinancials ? (
+              <StatCard
+                title="Total Revenue"
+                value={`$${(stats?.monthlyRevenue || 0).toLocaleString()}`}
+                change={{ value: stats?.revenueChange || 0, trend: (stats?.revenueChange || 0) >= 0 ? "up" : "down" }}
+                icon={<DollarSign className="h-6 w-6" />}
+              />
+            ) : (
+              <Card className="p-6 flex flex-col justify-center items-center text-center text-muted-foreground bg-secondary/20">
+                <DollarSign className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-sm">Revenue hidden</p>
+              </Card>
+            )}
+
             <StatCard
               title="Active Subscriptions"
               value={(stats?.activeSubscriptions || 0).toLocaleString()}
@@ -175,7 +218,7 @@ export default function Dashboard() {
                 <CardTitle>Revenue Overview</CardTitle>
                 <CardDescription>Monthly revenue for the current year</CardDescription>
               </div>
-              <Badge variant="success">+{stats?.revenueChange || 0}%</Badge>
+              {canViewFinancials && <Badge variant="success">+{stats?.revenueChange || 0}%</Badge>}
             </div>
           </CardHeader>
           <CardContent>
@@ -183,6 +226,12 @@ export default function Dashboard() {
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : !canViewFinancials ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-secondary/10 rounded-lg border border-dashed border-border">
+                  <Shield className="h-10 w-10 mb-2 opacity-50" />
+                  <p className="font-medium">Access Restricted</p>
+                  <p className="text-sm">You need Owner or Admin role to view financial data.</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">

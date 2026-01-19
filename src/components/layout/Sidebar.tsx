@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -9,12 +10,22 @@ import {
   FileText,
   ChevronLeft,
   LogOut,
-  Building2
+  Building2,
+  Plus
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { CreateOrgDialog } from "@/components/organizations/CreateOrgDialog";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -34,7 +45,8 @@ const navItems = [
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, organizations, currentOrg, switchOrganization } = useAuth();
+  const [showCreateOrg, setShowCreateOrg] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -49,21 +61,64 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar"
     >
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-        <Logo showText={!collapsed} />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          <motion.div
-            animate={{ rotate: collapsed ? 180 : 0 }}
-            transition={{ duration: 0.3 }}
+      <div className="flex flex-col border-b border-sidebar-border px-4 py-4 gap-4">
+        <div className="flex items-center justify-between">
+          <Logo showText={!collapsed} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
           >
-            <ChevronLeft className="h-4 w-4" />
-          </motion.div>
-        </Button>
+            <motion.div
+              animate={{ rotate: collapsed ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </motion.div>
+          </Button>
+        </div>
+
+        {!collapsed && (
+          <div className="w-full">
+            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Organization</p>
+            <Select
+              value={currentOrg?._id || ""}
+              onValueChange={(value) => {
+                if (value === "create_new") {
+                  setShowCreateOrg(true);
+                } else {
+                  switchOrganization(value);
+                }
+              }}
+            >
+              <SelectTrigger className="w-full bg-sidebar-accent/50 border-sidebar-border text-sidebar-foreground">
+                <SelectValue placeholder="Select Org">
+                  {currentOrg?.name || "Select Organization"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {organizations.map((org) => (
+                  <SelectItem key={org._id} value={org._id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+                <DropdownMenuSeparator />
+                <SelectItem value="create_new" className="cursor-pointer text-primary focus:text-primary">
+                  <div className="flex items-center">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Organization
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <CreateOrgDialog
+              open={showCreateOrg}
+              onOpenChange={setShowCreateOrg}
+            />
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
