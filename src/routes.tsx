@@ -13,6 +13,8 @@ import OrganizationsPage from "./pages/OrganizationsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import HealthPage from "./pages/HealthPage";
 import NotFound from "./pages/NotFound";
+import OrgSettingsPage from "./pages/OrgSettingsPage";
+import { ProfileSettingsPage } from "./pages/ProfileSettingsPage";
 
 export function AppRoutes() {
   return (
@@ -32,6 +34,9 @@ export function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/organizations" element={<OrganizationsPage />} />
+        <Route path="/organizations" element={<OrganizationsPage />} />
+        <Route path="/organization/settings" element={<OrgSettingsPage />} />
+        <Route path="/settings/profile" element={<ProfileSettingsPage />} />
         <Route path="/health" element={<HealthPage />} />
       </Route>
 

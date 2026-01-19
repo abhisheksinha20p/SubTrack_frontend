@@ -282,7 +282,7 @@ export default function BillingPage() {
                     <span className="text-muted-foreground">Storage</span>
                     <span className="font-medium text-foreground">
                       {((usage?.storage?.used || 0) / 1024).toFixed(1)} GB
-                      {currentPlan.limits.storage === -1 ? " (Unlimited)" : ` / ${(currentPlan.limits.storage / 1024).toFixed(0)} GB`}
+                      {currentPlan.limits.storage === -1 ? " (Unlimited)" : ` / ${(currentPlan.limits.storage / 1024).toFixed(1)} GB`}
                     </span>
                   </div>
                   <Progress value={currentPlan.limits.storage > 0 ? ((usage?.storage?.used || 0) / currentPlan.limits.storage) * 100 : 100} className="h-2" />
@@ -395,7 +395,7 @@ export default function BillingPage() {
                 <CardTitle>Recent Invoices</CardTitle>
                 <CardDescription>Download your past invoices</CardDescription>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/invoices'}>
                 View all
                 <ArrowRight className="ml-1 h-4 w-4" />
               </Button>

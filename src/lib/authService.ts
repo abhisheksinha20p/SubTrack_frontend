@@ -101,3 +101,15 @@ export async function refreshToken(refreshToken: string) {
   });
   return handleResponse(res);
 }
+
+export async function updateProfile(data: { firstName?: string; lastName?: string; email?: string }, token: string) {
+  const res = await fetch(`${API_BASE}/profile`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}

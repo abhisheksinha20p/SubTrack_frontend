@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, PropsWithChildren } from "react";
 import { Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 
-export function DashboardLayout() {
+export function DashboardLayout({ children }: PropsWithChildren) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -32,7 +32,7 @@ export function DashboardLayout() {
           onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </motion.div>
     </div>

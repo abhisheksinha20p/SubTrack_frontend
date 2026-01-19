@@ -39,7 +39,7 @@ const navItems = [
   { icon: CreditCard, label: "Billing", path: "/billing" },
   { icon: FileText, label: "Invoices", path: "/invoices" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Settings, label: "Settings", path: "/settings/profile" },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
@@ -117,6 +117,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               open={showCreateOrg}
               onOpenChange={setShowCreateOrg}
             />
+            {currentOrg && (currentOrg.role === 'owner' || currentOrg.role === 'admin') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 w-full justify-start px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => navigate('/organization/settings')}
+              >
+                <Settings className="mr-2 h-3.5 w-3.5" />
+                Organization Settings
+              </Button>
+            )}
           </div>
         )}
       </div>
